@@ -12,9 +12,9 @@ edition = "2021"
 
 # Dependencies
 [dependencies]
+godot = "0.2.2"
 strum = "0.24"
 strum_macros = "0.24"
-gdnative = "0.11"
 # gdnative = { git = "https://github.com/godot-rust/godot-rust.git" }
 
 # # Compile to a binary
