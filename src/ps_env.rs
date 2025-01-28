@@ -1,6 +1,7 @@
 
 use std::collections::HashMap;
-use gdnative::prelude::{Object, Ref, ToVariant, Variant, FromVariant, FromVariantError, Shared, Vector2};
+//use gdnative::prelude::{Object, Ref, ToVariant, Variant, FromVariant, FromVariantError, Shared, Vector2};
+use godot::prelude::*;
 use strum_macros::AsRefStr;
 
 #[derive(Clone, Copy, PartialEq, Eq, AsRefStr)]
@@ -91,37 +92,39 @@ pub enum PSValue {
     LinePointer(usize),
     VarIndex(usize),
     Instruction(PSInstructionSet),
-    GodotObject(Ref<Object>),
+    GodotObject(Gd<Object>),
     GodotVector2(Vector2),
     None
 }
 
-impl FromVariant for PSValue {
-    fn from_variant(variant: &Variant) -> Result<Self, gdnative::prelude::FromVariantError> {
-        if variant.is_nil() { return Ok(PSValue::None); }
-        if let Ok(v) = i32::from_variant(variant) { return Ok(PSValue::Number(v as f32)); }
-        if let Ok(v) = f32::from_variant(variant) { return Ok(PSValue::Number(v)); }
-        if let Ok(v) = String::from_variant(variant) { return Ok(PSValue::String(v)); }
-        if let Ok(v) = Vector2::from_variant(variant) { return Ok(PSValue::GodotVector2(v)); }
-        if let Ok(v) = Ref::<Object, Shared>::from_variant(variant) { return Ok(PSValue::GodotObject(v)); }
-        Err(FromVariantError::CannotCast { class: variant.to_string(), to: "PSValue" })
-    }
-}
- 
-impl ToVariant for PSValue {
-    fn to_variant(&self) -> Variant {
-        match self {
-            PSValue::String(v) => v.to_variant(),
-            PSValue::Number(v) => v.to_variant(),
-            PSValue::LinePointer(v) => v.to_variant(),
-            PSValue::VarIndex(_) => Variant::nil(), // Variable pointers cannot be exported
-            PSValue::Instruction(_) => Variant::nil(), // Instructions cannot be exported
-            PSValue::GodotObject(v) => v.to_variant(),
-            PSValue::GodotVector2(v) => v.to_variant(),
-            PSValue::None => Variant::nil()
-        }
-    }
-}
+//impl FromGodot for PSValue {
+//    fn from_variant(variant: &Variant) -> Result<Self, gdnative::prelude::FromVariantError> {
+//        if variant.is_nil() { return Ok(PSValue::None); }
+//        if let Ok(v) = i32::from_variant(variant) { return Ok(PSValue::Number(v as f32)); }
+//        if let Ok(v) = f32::from_variant(variant) { return Ok(PSValue::Number(v)); }
+//        if let Ok(v) = String::from_variant(variant) { return Ok(PSValue::String(v)); }
+//        if let Ok(v) = Vector2::from_variant(variant) { return Ok(PSValue::GodotVector2(v)); }
+//        if let Ok(v) = Ref::<Object, Shared>::from_variant(variant) { return Ok(PSValue::GodotObject(v)); }
+//        Err(FromVariantError::CannotCast { class: variant.to_string(), to: "PSValue" })
+//    }
+//}
+//
+//impl ToGodot for PSValue {
+//    type ToVia<'v> = Variant;
+//
+//    fn to_godot(&self) -> Self::ToVia<'_> {
+//        match self {
+//            PSValue::String(v) => v.to_variant(),
+//            PSValue::Number(v) => v.to_variant(),
+//            PSValue::LinePointer(v) => (*v as u64).to_variant(),
+//            PSValue::VarIndex(_) => Variant::nil(), // Variable pointers cannot be exported
+//            PSValue::Instruction(_) => Variant::nil(), // Instructions cannot be exported
+//            PSValue::GodotObject(v) => v.to_variant(),
+//            PSValue::GodotVector2(v) => v.to_variant(),
+//            PSValue::None => Variant::nil()
+//        }
+//    }
+//}
 
 // Convert PSValue to string
 impl From<&PSValue> for String {
@@ -198,7 +201,7 @@ impl PSValue {
         }
     }
 
-    pub fn expect_godot_object_ref(&self) -> &Ref<Object> {
+    pub fn expect_godot_object_ref(&self) -> &Gd<Object> {
         match self {
             PSValue::GodotObject(val) => val,
             _ => panic!("{} (got {}, expected GodotObject): Value {}", PSError::error_message(PSError::WrongType), self.get_type_as_text(), String::from(self))

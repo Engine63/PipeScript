@@ -14,17 +14,22 @@ mod reader;
 struct PipeScript {
     lines: Option<Vec<Vec<PSValue>>>,
     variable_hash: Option<HashMap<String, usize>>,
-    env: Option<Vec<PSValue>>
+    env: Option<Vec<PSValue>>,
+
+    base: Base<Node>
+}
+
+#[godot_api]
+impl INode for PipeScript {
+    fn init(base: Base<Node>) -> Self {
+        PipeScript { lines: None, variable_hash: None, env: None, base }
+    }
 }
 
 #[godot_api]
 impl PipeScript {
-    fn new(_owner: &Node) -> Self {
-        PipeScript { lines: None, variable_hash: None, env: None }
-    }
-
     #[func]
-    fn set_object_variable(&mut self, #[base] _owner: &Node, key_gd: GodotString, obj_ref: Ref<Object>) {
+    fn set_object_variable(&mut self, key_gd: String, obj_ref: Gd<Object>) {
         assert!(self.lines.is_some(), "Cannot insert variables, source isn't ready yet! Make sure to invoke `pipescript.interpret(source: String)` first.");
         let (variable_hash, env) = (
             self.variable_hash.as_mut().unwrap(),
@@ -48,7 +53,7 @@ impl PipeScript {
     }
 
     #[func]
-    fn execute(&mut self, #[base] _owner: &Node) {
+    fn execute(&mut self) {
         assert!(self.lines.is_some(), "Cannot execute, source isn't ready yet! Make sure to invoke `pipescript.interpret(source: String)` first.");
         let (lines, variable_hash, env) = (
             self.lines.as_mut().unwrap(),
@@ -62,7 +67,7 @@ impl PipeScript {
     }
 
     #[func]
-    fn debug_print_commands(&self, #[base] _owner: &Node) {
+    fn debug_print_commands(&self) {
         assert!(self.lines.is_some(), "Cannot execute, source isn't ready yet! Make sure to invoke `pipescript.interpret(source: String)` first.");
         let lines = self.lines.as_ref().unwrap();
         godot_print!("--- PRINT CMDS ---");
@@ -78,7 +83,7 @@ impl PipeScript {
     }
 
     #[func]
-    fn interpret(&mut self, #[base] _owner: &Node, source: GodotString) {
+    fn interpret(&mut self, source: String) {
         let (lines, variable_hash, env) = reader::source_to_instructions(
             source.to_string()
         );
