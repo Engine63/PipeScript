@@ -97,6 +97,32 @@ pub enum PSValue {
     None
 }
 
+impl From<PSValue> for Variant {
+    fn from(value: PSValue) -> Self {
+        match value {
+            PSValue::String(s) => s.to_variant(),
+            PSValue::Number(n) => n.to_variant(),
+            PSValue::LinePointer(n) => (n as u64).to_variant(),
+            PSValue::VarIndex(n) => (n as u64).to_variant(),
+            PSValue::Instruction(psi) => (psi as u64).to_variant(),
+            PSValue::GodotObject(gd) => gd.to_variant(),
+            PSValue::GodotVector2(vec) => vec.to_variant(),
+            PSValue::None => Variant::nil(),
+        }
+    }
+}
+
+impl From<Variant> for PSValue {
+    fn from(variant: Variant) -> Self {
+        if variant.is_nil() { return PSValue::None }
+        if let Ok(v) = f32::try_from_variant(&variant) { return PSValue::Number(v) }
+        if let Ok(s) = String::try_from_variant(&variant) { return PSValue::String(s) }
+        if let Ok(vec) = Vector2::try_from_variant(&variant) { return PSValue::GodotVector2(vec) }
+        if let Ok(gd) = Gd::try_from_variant(&variant) { return PSValue::GodotObject(gd) }
+        PSValue::None
+    }
+}
+
 //impl FromGodot for PSValue {
 //    fn from_variant(variant: &Variant) -> Result<Self, gdnative::prelude::FromVariantError> {
 //        if variant.is_nil() { return Ok(PSValue::None); }

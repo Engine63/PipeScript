@@ -1,6 +1,6 @@
 
 use crate::ps_env::*;
-use gdnative::prelude::{godot_print, OwnedToVariant, Variant, FromVariant, Vector2};
+use godot::{builtin::{Variant, Vector2}, classes::Object, global::godot_print, obj::Gd};
 
 pub fn execute_commands<'a>(lines: &'a mut Vec<Vec<PSValue>>, env: &mut Vec<PSValue>) {
     let line_count = lines.len();
@@ -107,7 +107,7 @@ pub fn execute_commands<'a>(lines: &'a mut Vec<Vec<PSValue>>, env: &mut Vec<PSVa
             PSInstructionSet::PrintNoLn => {
                 if line.len() < 2 { panic!("{}", PSError::error_message(PSError::MissingArgument)) }
                 for arg in line.split_at(1).1 {
-                    gdnative::log::print(get_variable(arg, env).to_string());
+                    godot_print!("{} ", get_variable(arg, env).to_string());
                 }
             },
             PSInstructionSet::Print => {
@@ -197,30 +197,27 @@ pub fn execute_commands<'a>(lines: &'a mut Vec<Vec<PSValue>>, env: &mut Vec<PSVa
             },
             // Godot object handler
             PSInstructionSet::GodotCall => {
-                let object = unsafe { get_variable(&line[1], env).expect_godot_object_ref().assume_safe() };
+                let mut object = get_variable(&line[1], env).expect_godot_object_ref().clone();
                 let func_name = get_variable(&line[2], env).expect_string();
                 let args = line.split_at(3).1.iter().map(|v| 
                     match v {
-                        PSValue::VarIndex(_) => get_variable(&v, env).owned_to_variant(),
-                        _ => v.owned_to_variant()
+                        PSValue::VarIndex(_) => get_variable(&v, env).to_owned().into(),
+                        _ => v.to_owned().into() // *v.into()
                     }
                 ).collect::<Vec<Variant>>();
-                unsafe { object.call(func_name, &args); };
+                object.call(&func_name, &args);
             },
             PSInstructionSet::GodotCallReturns => {
-                let object = unsafe { get_variable(&line[2], env).expect_godot_object_ref().assume_safe() };
+                let mut object = get_variable(&line[2], env).expect_godot_object_ref().clone();
                 let func_name = get_variable(&line[3], env).expect_string();
                 let args = line.split_at(4).1.iter().map(|v| 
                     match v {
-                        PSValue::VarIndex(_) => get_variable(&v, env).owned_to_variant(),
-                        _ => v.owned_to_variant()
+                        PSValue::VarIndex(_) => get_variable(&v, env).to_owned().into(),
+                        _ => v.to_owned().into()
                     }
                 ).collect::<Vec<Variant>>();
-                let return_value = unsafe { object.call(func_name, &args) };
-                match PSValue::from_variant(&return_value) {
-                    Ok(val) => set_variable(&line[1], val, env),
-                    Err(err) => panic!("{}", err.to_string())
-                }
+                let return_value: PSValue = object.call(&func_name, &args).into();
+                set_variable(&line[1], return_value, env);
             },
             // Godot Vector2 Library
             PSInstructionSet::GodotVector2Create => {
